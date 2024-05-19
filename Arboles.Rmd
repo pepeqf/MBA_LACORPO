@@ -1,0 +1,257 @@
+---
+title: "Entrenamiento de Árboles"
+author: "Grupo La Corpo"
+date: "19/5/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Integrantes del grupo
+
+* Ignacio Durigutti <ignaciodurigutti@gmail.com>
+* Carlos Quiroga <carlos.j.quiroga@gmail.com>
+* Silvina Bataller <contaduria@filesrl.com.ar>
+* Cintia Escudero <cintia.escudero@fce.uncu.edu.ar>
+* Juan Martin Salinas <juanmartin_salinas@hotmail.com>
+* Sergio Castello <scastello@centrifugacion.com.ar>
+
+
+```{r}
+library(car)
+library(readr)
+partners <- read_csv("BSC_proveedores.csv", 
+    col_types = cols(Empresa = col_factor(levels = c("Imitadora", 
+        "Proactiva", "Innovadora"))))
+# partners <- read.table("BSC_proveedores.csv",header=TRUE,sep=",")
+summary(partners)
+```
+Aqui vemos que la columna Recurso Humano por ejemplo no aporta información relevante para la toma de decisión debido a sus bajos valores, es decir no tiene un peso sustancial. La información relevante de este resumen es el tipo de empresa que se va a evaluar y que exista una distribución equitativa de las muestras.
+
+
+
+
+
+## Matriz de Covarianza
+
+```{r}
+library(scatterPlotMatrix)
+scatterPlotMatrix(partners)
+```
+Como vemos la columna 1, PK, (primary key) no es parte de los datos. Se trata de un número secuencial que no está relacionado con la muestra.
+
+<span style="color: green;">La matriz de covarianza nos ayuda a "separar la paja del trigo", es decir, nos permite desprendernos de columnas similares que no contienen información útil analizando la correlación entre éstas.</span>
+
+## Entrenamiento de árbol de decisión
+
+
+
+
+Esta técnica utiliza un set de datos representativos de una situación y utilizando recursivamente el teorema de Bayes puede armar un pronosticador o clasificador de datos. Es una técnica parecida a la de clustering, pero más refinada, pues no se basa en reglas sino en aprendizaje del set de datos usado como entrenamiento. En el paquete party existen dos funciones: ctree  que se utiliza para entrenar y predict que se usa para pronosticar o generar la regla de decición que debemos usar. 
+
+
+```{r}
+library(party)
+attach(partners)
+str(partners)    
+# describe al objeto transit y muestras las columna que tiene
+
+ind <- sample(2, nrow(partners), replace=TRUE, prob=c(0.7, 0.3))  
+# toma una muestra  
+ind  
+# nos imprime la muestra tomada.
+```
+
+
+```{r}
+trainData <- partners [ind==1,]    
+# genero un set de entrenamiento 
+testData <- partners [ind==2,]    
+# genero un set de datos de prueba
+myFormula <- Empresa ~ Rec_Humano + Tecnologia + Capital + Equipo 
+transit_ctree <- ctree(myFormula, data=trainData)    
+# creo el motor de entrenamiento
+# Verificar las prediciones 
+table(predict(transit_ctree), trainData$Empresa) 
+print(transit_ctree) 
+```
+
+
+
+
+
+```{r}
+library(party)
+attach(partners)
+str(partners)    
+# describe al objeto transit
+ind <- sample(2, nrow(partners), replace=TRUE, prob=c(0.7, 0.3))  
+# toma una muestra 
+ind  
+# nos imprime la muestra tomada.
+```
+
+
+
+```{r}
+trainData <- partners [ind==1,]    
+# genero un set de entrenamiento 
+testData <- partners [ind==2,]    
+# genero un set de datos de prueba
+myFormula <- Empresa ~ Rec_Humano + Tecnologia + Capital + Equipo 
+transit_ctree <- ctree(myFormula, data=trainData)    
+# creo el motor de entrenamiento
+# Verificar las prediciones 
+table(predict(transit_ctree), trainData$Empresa) 
+```
+
+
+
+```{r}
+table(predict(transit_ctree), trainData$Empresa) 
+```
+
+<span style="color: red;"> De esto se desprende que si bien el modelo tiene un pequeño error, en realidad es bastante bueno para predecir el tipo de empresa.</span>
+
+## Impresión del Árbol de Decisión
+
+```{r}
+plot(transit_ctree, las=2)
+```
+
+
+## Conclusiones del árbol de decisión
+
+Lo primero que uno debe preguntarse ante la presentación de una nueva empresa es por el capital. A priori, si una empresa tiene un capital menor o igual a 1.9 indefectiblemente caerá en el tipo Imitadora. En cambio si el capital es mayor a 1.9 lo importante a observar es el Equipo. Si éste es bueno, la empresa se clasificará como Innovadora. Si el Equipo no es bueno, volvemos a preguntar por el capital en cuyo caso un valor menor a 4.8 nos dará una alta certeza (de 5 sobre 36) mientras que un valor mayor nos dará una certeza del 50% aproximadamente.
+En estos gráficos, cada uno de los rectángulos representa un nodo de nuestro árbol, con su regla de clasificación. Cada nodo está coloreado de acuerdo a la categoría mayoritaria entre los datos que agrupa. Esta es la categoría que ha predicho el modelo para ese grupo. Dentro del rectángulo de cada nodo se muestra qué proporción de casos pertenecen a cada categoría y la proporción del total de datos que han sido agrupados allí.
+```{r}
+summary(trainData$Empresa)
+```
+
+
+
+## Conclusiones finales
+ 
+Los árboles de decisión o de clasificación son modelos predictivos formados por reglas binarias (si/no) con las que se consigue repartir las observaciones en función de sus atributos y predecir así el valor de la variable respuesta.
+
+Muchos métodos predictivos generan modelos globales en los que una única ecuación se aplica a todo el espacio muestral. Cuando el caso de uso implica múltiples predictores, que interaccionan entre ellos de forma compleja y no lineal, es muy difícil encontrar un único modelo global que sea capaz de reflejar la relación entre las variables. Los métodos estadísticos basados en árboles engloban a un conjunto de técnicas supervisadas no paramétricas que consiguen segmentar el espacio de los predictores en regiones simples, dentro de las cuales es más sencillo manejar las interacciones. Es esta característica la que les proporciona gran parte de su potencial.
+
+Los métodos basados en árboles se han convertido en uno de los referentes dentro del ámbito predictivo debido a los buenos resultados que generan en problemas muy diversos.
+
+### Ventajas
+
+Los árboles son fáciles de interpretar aun cuando las relaciones entre predictores son complejas.
+
+Los modelos basados en un solo árbol se pueden representar gráficamente aun cuando el número de predictores es mayor de 3.
+
+Los árboles pueden, en teoría, manejar tanto predictores numéricos como categóricos sin tener que crear variables dummy. En la práctica, esto depende de la implementación del algoritmo que tenga cada librería.
+
+Al tratarse de métodos no paramétricos, no es necesario que se cumpla ningún tipo de distribución específica.
+
+Por lo general, requieren mucha menos limpieza y preprocesado de los datos en comparación con otros métodos de aprendizaje estadístico (por ejemplo, no requieren estandarización).
+
+No se ven muy influenciados por outliers.
+
+Son muy útiles en la exploración de datos, permiten identificar de forma rápida y eficiente las variables (predictores) más importantes.
+
+Son capaces de seleccionar predictores de forma automática.
+
+Pueden aplicarse a problemas de regresión y clasificación.
+
+### Desventajas
+
+La capacidad predictiva de los modelos basados en un único árbol es bastante inferior a la conseguida con otros modelos. Esto es debido a su tendencia al sobreajuste y alta varianza. Sin embargo, existen técnicas más complejas que, haciendo uso de la combinación de múltiples árboles (bagging, random forest, boosting), consiguen mejorar en gran medida este problema.
+
+Son sensibles a datos de entrenamiento desbalanceados (una de las clases domina sobre las demás).
+
+Cuando tratan con predictores continuos, pierden parte de su información al categorizarlos en el momento de la división de los nodos.
+
+No son capaces de extrapolar fuera del rango de los predictores observado en los datos de entrenamiento.
+
+## Algoritmo
+
+Supongamos que tenemos un conjunto de entrenamiento (xi,cj), donde i=1,2,…,n
+ y las etiquetas j=1,2,…,g. Se comienza con un nodo inicial, dividiendo una variable independendiente que se escoge de modo tal que de lugar a dos conjuntos homogeneos de datos (que maximizan la reducción en la impureza). Se elige, por ejemplo, la variable x1 y se determina un punto de corte c, de modo que se puedan separar los datos en dos conjuntos: aquellos con x1≤c y los que tienen x1>c. De este nodo inicial saldrán ahora dos nodos. En cada uno de estos nodos se vuelve a repetir el proceso de seleccionar una variable y un punto de corte para dividir la muestra. El proceso termina cuando se hayan clasificado la mayoría de las observaciones correctamente en su grupo.
+
+En los árboles de decisión se encuentran los siguientes componentes: nodos, ramas y hojas. Los nodos son las variables de entrada, las ramas representan los posibles valores de las variables de entrada y las hojas son los posibles valores de la variable de salida. Como primer elemento de un árbol de decisión tenemos el nodo raíz que va a representar la variable de mayor relevancia en el proceso de clasificación.
+
+Existen diferentes algortimos para realizar el árbol de decisión. Veamos a continuación, dos de los más usados.
+
+### Árbol CART
+
+El algoritmo CART es el acrónimo de Classification And Regression Trees. Fue diseñado por Breiman et al. (1984). Con este algoritmo, se generan árboles de decisión binarios, lo que quiere decir que cada nodo se divide en exactamente dos ramas.
+
+Este modelo admite variables de entrada y de salida nominales, ordinales y continuas, por lo que se pueden resolver tanto problemas de clasificación como de regresión. El algoritmo utiliza el índice de Gini para calcular la medida de impureza.
+
+De manera general, lo que hace este algoritmo es encontrar la variable independiente que mejor separa nuestros datos en grupos. Esta mejor separación es expresada con una regla. A cada regla corresponde un nodo.
+
+Una vez hecho esto, los datos son separados (particionados) en grupos a partir de la regla obtenida. Después, para cada uno de los grupos resultantes, repite el mismo proceso. Se busca la variable que mejor separa los datos en grupos, se obtiene una regla, y se separan los datos. Hacemos esto de manera recursiva hasta que nos es imposible obtener una mejor separación. Cuando esto ocurre, el algoritmo se detiene. Cuando un grupo no puede ser partido mejor, se le llama nodo terminal u hoja.
+
+Una característica muy importante en este algoritmo es que una vez que alguna variable ha sido elegida para separar los datos, ya no es usada de nuevo en los grupos que ha creado. Se buscan variables distintas que mejoren la separación de los datos.
+
+En R, se encuentra programado en la librería <span style="color: red;">rpart()</span> . También se encuentra programado la visualización del árbol, en la librería rpart.plot() .
+
+### Árbol C5.0
+
+El algoritmo C5 es uno de los algoritmos más utilizados en el ámbito de los árboles de decisión. La forma de inferir árboles de decisión a través de este algoritmo es el resultado de la evolución del algoritmo C4.5 (Quinlan, 1993) diseñado por el mismo autor.
+
+Este algoritmo crea modelos de árbol de clasificación, permitiendo sólo variables de salida categórica. Las variables de entrada pueden ser de naturaleza continua o categórica. El algoritmo construye el árbol de decisión de manera descendente y empieza preguntándose, ¿qué atributo es el que debería ser colocado en la raíz del árbol. Para resolver esta cuestión cada atributo es evaluado a través de un test estadístico que determina cómo clasifica él solo los casos de entrenamiento. Cuando se selecciona el mejor atributo éste es colocado en la raíz del árbol. Entonces una rama y su nodo se crea para cada valor posible del atributo en cuestión. Los casos de entrenamiento son repartidos en los nodos descendentes de acuerdo al valor que tengan para el atributo de la raíz.
+
+El proceso se repite para seleccionar un atributo que será ahora colocado en cada uno de los nodos generados. Generalmente el algoritmo se detiene cuando los casos de entrenamiento comparten el mismo valor para el atributo que está siendo probado. Es decir la ganacia es cero.
+
+## Ejemplo
+
+Para este ejemplo, trabajaremos con el conjunto de datos iris.
+
+Mediante un muestreo aleatorio, separamos el conjunto de entrenamiento y en cojunto de prueba. Supongamos en 5 grupos, 4 para entrenamiento y 1 para prueba.
+
+```{r}
+data    <- iris
+N       <- nrow(data)
+n       <- round(N*0.80)
+set.seed(1234)
+indices       <- sample(1:N,n)
+entrenamiento <- data[indices,]
+prueba        <- data[-indices,]
+```
+
+Construimos el modelo ajustado con los datos de entrenamiento.
+
+```{r}
+library(rpart)
+modelo1 <- rpart(Species ~ ., data = entrenamiento)
+modelo1
+```
+
+```{r}
+library(rpart.plot)     
+rpart.plot(modelo1)
+```
+
+En estos gráficos, cada uno de los rectángulos representa un nodo de nuestro árbol, con su regla de clasificación. Cada nodo está coloreado de acuerdo a la categoría mayoritaria entre los datos que agrupa. Esta es la categoría que ha predicho el modelo para ese grupo. Dentro del rectángulo de cada nodo se muestra qué proporción de casos pertenecen a cada categoría y la proporción del total de datos que han sido agrupados allí.
+
+Podemos calcular la predición para los datos de entrenamiento.
+
+```{r}
+pred<- predict(modelo1,entrenamiento[,-5],type="class")
+tt<- table(pred,entrenamiento[,5])
+tt
+```
+
+```{r}
+TA <- (sum(diag(tt)))/sum(tt) # tasa de aciertos
+round(TA,2)
+```
+Para analizar la calidad del modelo, veamos que tan buena es la predicción para el conjunto de prueba.
+
+```{r}
+Pred1    <- predict(modelo1, prueba[,-5],type="class")
+table    <- table(prueba[,5],Pred1)
+table
+```
+```{r}
+(sum(diag(table)))/sum(table)
+```
+
